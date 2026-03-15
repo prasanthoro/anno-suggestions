@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pastor Dashboard</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  
+  <div class="admin-layout">
+    <!-- Thread List -->
+    <div class="card">
+      <div class="card-title">
+        <span class="icon">📋</span>
+        <span>All Questions</span>
+      </div>
+
+      <!-- Filters -->
+      <div style="display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap;">
+        <select id="filter-category" style="flex:1; min-width:120px;">
+          <option value="">All Categories</option>
+          <option value="prayer">🙏 Prayer Request</option>
+          <option value="spiritual">📖 Spiritual Guidance</option>
+          <option value="personal">💭 Personal Question</option>
+          <option value="family">👨‍👩‍👧‍👦 Marriage & Family</option>
+          <option value="faith">✝ Faith & Doubts</option>
+          <option value="other">💡 Other</option>
+        </select>
+        <select id="filter-status" style="flex:1; min-width:120px;">
+          <option value="">All Status</option>
+          <option value="pending">Pending</option>
+          <option value="answered">Answered</option>
+        </select>
+      </div>
+
+      <div class="thread-list" id="admin-threads"></div>
+      <div class="empty-state" id="threads-empty">
+        <div class="empty-icon">📭</div>
+        <p>No questions yet. They will appear here when someone submits a question.</p>
+      </div>
+      <button class="btn-secondary" id="reload-btn" style="width:100%; margin-top:12px;">Reload Questions</button>
+    </div>
+
+    <!-- Message View -->
+    <div class="card">
+      <div class="card-title">
+        <span class="icon">💬</span>
+        <span>Conversation</span>
+      </div>
+
+      <div id="conv-header" style="display:none; margin-bottom:12px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+          <span class="thread-pill" id="admin-pill"></span>
+          <span id="admin-meta" style="font-size:13px; color:var(--muted);"></span>
+        </div>
+      </div>
+
+      <div class="messages-container" id="admin-messages"></div>
+
+      <div class="empty-state" id="admin-empty">
+        <div class="empty-icon">👆</div>
+        <p>Select a question from the list to view the conversation and reply.</p>
+      </div>
+
+      <div class="reply-box" id="reply-box" style="display:none;">
+        <div class="divider"></div>
+        <textarea id="reply-input" placeholder="Write your reply with love and wisdom..." maxlength="2000"></textarea>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <button class="btn-primary" id="send-reply" style="flex:1; margin-top:0;">Send Reply</button>
+          <button class="btn-secondary" id="mark-answered" style="margin-top:0;">Mark Answered</button>
+        </div>
+        <div class="status-text" id="reply-status"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const threadsEl = document.getElementById('admin-threads');
+    const threadsEmpty = document.getElementById('threads-empty');
+    const reloadBtn = document.getElementById('reload-btn');
+    const messagesEl = document.getElementById('admin-messages');
+    const adminEmpty = document.getElementById('admin-empty');
+    const adminPill = document.getElementById('admin-pill');
+    const adminMeta = document.getElementById('admin-meta');
+    const convHeader = document.getElementById('conv-header');
+    const replyBox = document.getElementById('reply-box');
+    const replyInput = document.getElementById('reply-input');
+    const replyStatus = document.getElementById('reply-status');
+    const sendReplyBtn = document.getElementById('send-reply');
+    const markAnsweredBtn = document.getElementById('mark-answered');
+    const filterCategory = document.getElementById('filter-category');
+    const filterStatus = document.getElementById('filter-status');
+
+    let activeThread = null;
+    let allThreads = [];
+
+    reloadBtn.addEventListener('click', loadThreads);
+    filterCategory.addEventListener('change', renderThreadList);
+    filterStatus.addEventListener('change', renderThreadList);
+    loadThreads();
+
+    // Auto-refresh every 15s
+    setInterval(loadThreads, 15000);
+
+    async function loadThreads() {
+      try {
+        const res = await fetch('/api/admin/threads');
+        const data = await res.json();
+        allThreads = data.threads;
+        renderThreadList();
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    function renderThreadList() {
+      threadsEl.innerHTML = '';
+      let filtered = allThreads;
+
+      const catFilter = filterCategory.value;
+      if (catFilter) {
+        filtered = filtered.filter(t => t.category === catFilter);
+      }
+
+      const statusFilter = filterStatus.value;
+      if (statusFilter === 'answered') {
+        filtered = filtered.filter(t => t.status === 'answered');
+      } else if (statusFilter === 'pending') {
+        filtered = filtered.filter(t => t.status !== 'answered');
+      }
+
+      if (!filtered.length) {
+        threadsEmpty.style.display = 'block';
+        return;
+      }
+      threadsEmpty.style.display = 'none';
+
+      filtered.forEach(thread => {
+        const el = document.createElement('div');
+        el.className = `admin-thread-item${activeThread === thread.threadId ? ' active' : ''}`;
+
+        const catIcon = getCategoryIcon(thread.category);
+        const isAnswered = thread.status === 'answered';
+        const statusHtml = isAnswered
+          ? '<span class="status-badge answered">Answered</span>'
+          : '<span class="status-badge pending">Pending</span>';
+
+        el.innerHTML = `
+          <div class="at-header">
+            <span class="at-id">${catIcon} #${escapeHtml(thread.threadId)}</span>
+            ${statusHtml}
+          </div>
+          <div class="at-meta">
+            <span>${thread.messageCount} message(s)</span>
+            <span>${thread.latestMessageAt ? formatTime(thread.latestMessageAt) : '—'}</span>
+          </div>
+        `;
+        el.addEventListener('click', () => selectThread(thread.threadId));
+        threadsEl.appendChild(el);
+      });
+    }
+
+    async function selectThread(id) {
+      activeThread = id;
+      adminPill.textContent = `#${id}`;
+      convHeader.style.display = 'block';
+      replyBox.style.display = 'flex';
+      adminEmpty.style.display = 'none';
+      adminMeta.textContent = 'Loading...';
+      renderThreadList(); // update active highlight
+
+      try {
+        const res = await fetch(`/api/admin/threads/${encodeURIComponent(id)}`);
+        if (!res.ok) throw new Error('Failed');
+        const data = await res.json();
+        adminMeta.textContent = `${data.messages.length} messages`;
+        renderMessages(data.messages);
+      } catch (err) {
+        adminMeta.textContent = 'Could not load thread.';
+        console.error(err);
+      }
+    }
+
+    function renderMessages(messages) {
+      messagesEl.innerHTML = '';
+      messages.forEach(msg => {
+        const el = document.createElement('div');
+        const isAdmin = msg.sender === 'admin';
+        el.className = `msg ${isAdmin ? 'admin-msg' : 'user-msg'}`;
+
+        const catLabel = msg.category ? getCategoryLabel(msg.category) : '';
+
+        el.innerHTML = `
+          <div class="msg-header">
+            <span class="msg-sender">${isAdmin ? 'Your Reply' : 'Anonymous Question'}</span>
+            <span class="msg-time">${formatTime(msg.created_at)}</span>
+          </div>
+          ${catLabel && !isAdmin ? `<span class="msg-category">${escapeHtml(catLabel)}</span>` : ''}
+          <div class="msg-body">${escapeHtml(msg.body)}</div>
+        `;
+        messagesEl.appendChild(el);
+      });
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+
+    sendReplyBtn.addEventListener('click', async () => {
+      if (!activeThread || !replyInput.value.trim()) return;
+      replyStatus.textContent = 'Sending...';
+      replyStatus.className = 'status-text';
+      sendReplyBtn.disabled = true;
+
+      try {
+        const res = await fetch(`/api/admin/threads/${encodeURIComponent(activeThread)}/reply`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: replyInput.value })
+        });
+        if (!res.ok) throw new Error('Failed');
+        replyInput.value = '';
+        replyStatus.textContent = 'Reply sent successfully!';
+        replyStatus.className = 'status-text success';
+        await selectThread(activeThread);
+        await loadThreads();
+      } catch (err) {
+        replyStatus.textContent = 'Failed to send reply.';
+        replyStatus.className = 'status-text error';
+        console.error(err);
+      } finally {
+        sendReplyBtn.disabled = false;
+      }
+    });
+
+    markAnsweredBtn.addEventListener('click', async () => {
+      if (!activeThread) return;
+      try {
+        await fetch(`/api/admin/threads/${encodeURIComponent(activeThread)}/status`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'answered' })
+        });
+        await loadThreads();
+      } catch (err) { console.error(err); }
+    });
+
+    function getCategoryIcon(cat) {
+      const map = { prayer: '🙏', spiritual: '📖', personal: '💭', family: '👨‍👩‍👧‍👦', faith: '✝', other: '💡' };
+      return map[cat] || '💡';
+    }
+
+    function getCategoryLabel(cat) {
+      const map = {
+        prayer: 'Prayer Request', spiritual: 'Spiritual Guidance',
+        personal: 'Personal Question', family: 'Marriage & Family',
+        faith: 'Faith & Doubts', other: 'Other'
+      };
+      return map[cat] || '';
+    }
+
+    function formatTime(ts) {
+      const normalized = ts && !ts.includes('T') ? ts.replace(' ', 'T') + 'Z' : ts;
+      const d = new Date(normalized);
+      const now = new Date();
+      const diff = now - d;
+      if (diff < 60000) return 'Just now';
+      if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
+      if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
+      return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+    }
+
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+  </script>
+</body>
+</html>

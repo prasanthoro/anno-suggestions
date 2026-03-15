@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Ask Your Pastor</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <!-- Header -->
+  <header class="app-header">
+    
+    <div class="header-controls">
+      <button class="lang-btn active" data-lang="en">English</button>
+      <button class="lang-btn" data-lang="te">తెలుగు</button>
+    </div>
+  </header>
+
+  <div class="container">
+    <!-- Bible Verse -->
+    <div class="verse-card">
+      <div class="verse-icon">📖</div>
+      <div class="verse-text" id="verse-text">"Cast all your anxiety on Him because He cares for you."</div>
+      <div class="verse-ref" id="verse-ref">— 1 Peter 5:7</div>
+    </div>
+
+    <!-- Tab Navigation -->
+    <div class="tab-bar">
+      <button class="tab-btn active" data-tab="ask">
+        <span class="tab-icon">✉</span>
+        <span data-i18n="tabAsk">Ask</span>
+      </button>
+      <button class="tab-btn" data-tab="thread">
+        <span class="tab-icon">💬</span>
+        <span data-i18n="tabThread">My Thread</span>
+      </button>
+      <button class="tab-btn" data-tab="history">
+        <span class="tab-icon">📋</span>
+        <span data-i18n="tabHistory">History</span>
+      </button>
+    </div>
+
+    <!-- TAB 1: Ask a Question -->
+    <div class="tab-content active" id="tab-ask">
+      <div class="card">
+        <div class="card-title">
+          <span class="icon">🙏</span>
+          <span data-i18n="askTitle">What would you like to ask?</span>
+        </div>
+
+        <!-- Category Selection -->
+        <div class="card-title" style="font-size:13px; color:var(--muted); margin-bottom:8px;">
+          <span data-i18n="selectCategory">Select a category</span>
+        </div>
+        <div class="category-grid" id="category-grid">
+          <button class="category-btn" data-category="prayer">
+            <span class="cat-icon">🙏</span>
+            <span data-i18n="catPrayer">Prayer Request</span>
+          </button>
+          <button class="category-btn" data-category="spiritual">
+            <span class="cat-icon">📖</span>
+            <span data-i18n="catSpiritual">Spiritual Guidance</span>
+          </button>
+          <button class="category-btn" data-category="personal">
+            <span class="cat-icon">💭</span>
+            <span data-i18n="catPersonal">Personal Question</span>
+          </button>
+          <button class="category-btn" data-category="family">
+            <span class="cat-icon">👨‍👩‍👧‍👦</span>
+            <span data-i18n="catFamily">Marriage & Family</span>
+          </button>
+          <button class="category-btn" data-category="faith">
+            <span class="cat-icon">✝</span>
+            <span data-i18n="catFaith">Faith & Doubts</span>
+          </button>
+          <button class="category-btn" data-category="other">
+            <span class="cat-icon">💡</span>
+            <span data-i18n="catOther">Other</span>
+          </button>
+        </div>
+
+        <!-- Question Form -->
+        <form id="ask-form">
+          <textarea id="question-input" required maxlength="2000" data-i18n-placeholder="questionPlaceholder" placeholder="Write your question here... Your identity is completely hidden."></textarea>
+          <div class="char-count"><span id="char-count">0</span>/2000</div>
+          <button type="submit" class="btn-primary" id="submit-btn" data-i18n="submitBtn">
+            Submit Anonymously
+          </button>
+        </form>
+        <div class="status-text" id="ask-status"></div>
+      </div>
+    </div>
+
+    <!-- TAB 2: My Thread -->
+    <div class="tab-content" id="tab-thread">
+      <div class="card">
+        <div class="card-title">
+          <span class="icon">💬</span>
+          <span data-i18n="threadTitle">Your Conversation</span>
+        </div>
+
+        <div id="thread-header" style="display:none; margin-bottom:12px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+            <span class="thread-pill" id="thread-pill"></span>
+            <div class="btn-row">
+              <button class="btn-secondary" id="refresh-btn" data-i18n="refreshBtn">Refresh</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="messages-container" id="messages-container"></div>
+
+        <div class="empty-state" id="thread-empty">
+          <div class="empty-icon">💌</div>
+          <p data-i18n="threadEmpty">No active thread yet. Ask a question to start a conversation with your pastor.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 3: History -->
+    <div class="tab-content" id="tab-history">
+      <div class="card">
+        <div class="card-title">
+          <span class="icon">📋</span>
+          <span data-i18n="historyTitle">Your Saved Threads</span>
+        </div>
+
+        <div class="input-row" style="margin-bottom:14px;">
+          <input id="thread-id-input" data-i18n-placeholder="threadIdPlaceholder" placeholder="Enter thread ID (e.g., A12)" />
+          <button class="btn-outline" id="load-thread-btn" data-i18n="loadThread">Load</button>
+        </div>
+
+        <div class="thread-list" id="saved-threads"></div>
+
+        <div class="empty-state" id="history-empty" style="display:none;">
+          <div class="empty-icon">📂</div>
+          <p data-i18n="historyEmpty">No saved threads on this device. Your thread IDs are saved here automatically when you ask a question.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* ── Translations ── */
+    const i18n = {
+      en: {
+        appTitle: 'Ask Your Pastor',
+        appSubtitle: 'Ask personal questions to your pastor or spiritual leader — completely anonymous, completely confidential.',
+        tabAsk: 'Ask',
+        tabThread: 'My Thread',
+        tabHistory: 'History',
+        askTitle: 'What would you like to ask?',
+        selectCategory: 'Select a category',
+        catPrayer: 'Prayer Request',
+        catSpiritual: 'Spiritual Guidance',
+        catPersonal: 'Personal Question',
+        catFamily: 'Marriage & Family',
+        catFaith: 'Faith & Doubts',
+        catOther: 'Other',
+        questionPlaceholder: 'Write your question here... Your identity is completely hidden.',
+        submitBtn: 'Submit Anonymously',
+        threadTitle: 'Your Conversation',
+        refreshBtn: 'Refresh',
+        threadEmpty: 'No active thread yet. Ask a question to start a conversation with your pastor.',
+        historyTitle: 'Your Saved Threads',
+        threadIdPlaceholder: 'Enter thread ID (e.g., A12)',
+        loadThread: 'Load',
+        historyEmpty: 'No saved threads on this device. Your thread IDs are saved here automatically when you ask a question.',
+        sending: 'Sending your question...',
+        sent: 'Your question has been sent! Your pastor will reply soon.',
+        sendFail: 'Could not send. Please try again.',
+        loading: 'Loading thread...',
+        loaded: 'Thread loaded successfully.',
+        notFound: 'Thread not found. Please check the ID.',
+        you: 'You',
+        pastorReply: 'Admin Reply',
+        deleteConfirm: 'Remove this thread from your device?',
+        noSavedThreads: 'No saved threads yet.',
+        charCount: '/2000',
+      },
+      te: {
+        appTitle: 'మీ పాస్టర్‌ను అడగండి',
+        appSubtitle: 'మీ పాస్టర్ లేదా ఆధ్యాత్మిక నాయకుడిని వ్యక్తిగత ప్రశ్నలు అడగండి — పూర్తిగా అనామకం, పూర్తిగా గోప్యం.',
+        tabAsk: 'అడగండి',
+        tabThread: 'నా థ్రెడ్',
+        tabHistory: 'చరిత్ర',
+        askTitle: 'మీరు ఏమి అడగాలనుకుంటున్నారు?',
+        selectCategory: 'వర్గాన్ని ఎంచుకోండి',
+        catPrayer: 'ప్రార్థన అభ్యర్థన',
+        catSpiritual: 'ఆధ్యాత్మిక మార్గదర్శకత్వం',
+        catPersonal: 'వ్యక్తిగత ప్రశ్న',
+        catFamily: 'వివాహం & కుటుంబం',
+        catFaith: 'విశ్వాసం & సందేహాలు',
+        catOther: 'ఇతరం',
+        questionPlaceholder: 'మీ ప్రశ్నను ఇక్కడ రాయండి... మీ గుర్తింపు పూర్తిగా దాచబడుతుంది.',
+        submitBtn: 'అనామకంగా పంపండి',
+        threadTitle: 'మీ సంభాషణ',
+        refreshBtn: 'రిఫ్రెష్',
+        threadEmpty: 'ఇంకా చురుకైన థ్రెడ్ లేదు. మీ పాస్టర్‌తో సంభాషణ ప్రారంభించడానికి ప్రశ్న అడగండి.',
+        historyTitle: 'మీ సేవ్ చేసిన థ్రెడ్‌లు',
+        threadIdPlaceholder: 'థ్రెడ్ ఐడి నమోదు చేయండి (ఉదా: A12)',
+        loadThread: 'లోడ్',
+        historyEmpty: 'ఈ పరికరంలో సేవ్ చేసిన థ్రెడ్‌లు లేవు. మీరు ప్రశ్న అడిగినప్పుడు మీ థ్రెడ్ ఐడిలు ఇక్కడ స్వయంచాలకంగా సేవ్ అవుతాయి.',
+        sending: 'మీ ప్రశ్న పంపబడుతోంది...',
+        sent: 'మీ ప్రశ్న పంపబడింది! మీ పాస్టర్ త్వరలో సమాధానం ఇస్తారు.',
+        sendFail: 'పంపలేకపోయింది. దయచేసి మళ్ళీ ప్రయత్నించండి.',
+        loading: 'థ్రెడ్ లోడ్ అవుతోంది...',
+        loaded: 'థ్రెడ్ విజయవంతంగా లోడ్ అయింది.',
+        notFound: 'థ్రెడ్ కనుగొనబడలేదు. దయచేసి ఐడి తనిఖీ చేయండి.',
+        you: 'మీరు',
+        pastorReply: 'పాస్టర్ సమాధానం',
+        deleteConfirm: 'ఈ థ్రెడ్‌ను మీ పరికరం నుండి తొలగించాలా?',
+        noSavedThreads: 'ఇంకా సేవ్ చేసిన థ్రెడ్‌లు లేవు.',
+      }
+    };
+
+    const verses = {
+      en: [
+        { text: '"Cast all your anxiety on Him because He cares for you."', ref: '— 1 Peter 5:7' },
+        { text: '"Come to me, all you who are weary and burdened, and I will give you rest."', ref: '— Matthew 11:28' },
+        { text: '"Trust in the Lord with all your heart and lean not on your own understanding."', ref: '— Proverbs 3:5' },
+        { text: '"The Lord is my shepherd; I shall not want."', ref: '— Psalm 23:1' },
+        { text: '"For I know the plans I have for you, plans to prosper you and not to harm you."', ref: '— Jeremiah 29:11' },
+        { text: '"I can do all things through Christ who strengthens me."', ref: '— Philippians 4:13' },
+        { text: '"Be strong and courageous. Do not be afraid; do not be discouraged."', ref: '— Joshua 1:9' },
+        { text: '"The Lord is close to the brokenhearted and saves those who are crushed in spirit."', ref: '— Psalm 34:18' },
+      ],
+      te: [
+        { text: '"ఆయన మిమ్మును గూర్చి చింతించుచున్నాడు గనుక మీ చింత యావత్తు ఆయనమీద వేయుడి."', ref: '— 1 పేతురు 5:7' },
+        { text: '"ప్రయాసపడి భారము మోసికొనుచున్న సమస్త జనులారా, నా యొద్దకు రండి; నేను మీకు విశ్రాంతి కలుగజేతును."', ref: '— మత్తయి 11:28' },
+        { text: '"నీ పూర్ణహృదయముతో యెహోవాయందు నమ్మకముంచుము; నీ స్వబుద్ధిని ఆధారము చేసికొనకుము."', ref: '— సామెతలు 3:5' },
+        { text: '"యెహోవా నా కాపరి; నాకు లేమి కలుగదు."', ref: '— కీర్తన 23:1' },
+        { text: '"మీకు క్షేమాభివృద్ధి కలుగజేయుటకే నేను మీ విషయమై ఉద్దేశించిన సంగతులు నాకు తెలియును."', ref: '— యిర్మీయా 29:11' },
+        { text: '"నన్ను బలపరచువానియందు నేను సమస్తమును చేయగలను."', ref: '— ఫిలిప్పీయులు 4:13' },
+        { text: '"నిబ్బరముగా ఉండుము, ధైర్యముగా ఉండుము; భయపడకుము, దిగులుపడకుము."', ref: '— యెహోషువ 1:9' },
+        { text: '"హృదయ క్షోభ నొందినవారికి యెహోవా ఆసన్నుడు; నలిగిన మనస్సుగలవారిని ఆయన రక్షించును."', ref: '— కీర్తన 34:18' },
+      ]
+    };
+
+    /* ── State ── */
+    let currentLang = localStorage.getItem('lang') || 'en';
+    let selectedCategory = null;
+    let activeThreadId = null;
+    let autoRefreshTimer = null;
+
+    /* ── DOM refs ── */
+    const askForm = document.getElementById('ask-form');
+    const questionInput = document.getElementById('question-input');
+    const charCount = document.getElementById('char-count');
+    const askStatus = document.getElementById('ask-status');
+    const submitBtn = document.getElementById('submit-btn');
+    const messagesContainer = document.getElementById('messages-container');
+    const threadHeader = document.getElementById('thread-header');
+    const threadPill = document.getElementById('thread-pill');
+    const threadEmpty = document.getElementById('thread-empty');
+    const refreshBtn = document.getElementById('refresh-btn');
+    const threadIdInput = document.getElementById('thread-id-input');
+    const loadThreadBtn = document.getElementById('load-thread-btn');
+    const savedThreadsEl = document.getElementById('saved-threads');
+    const historyEmpty = document.getElementById('history-empty');
+    const verseText = document.getElementById('verse-text');
+    const verseRef = document.getElementById('verse-ref');
+
+    /* ── Init ── */
+    applyLang(currentLang);
+    showRandomVerse();
+    renderSavedThreads();
+
+    // Try to load the most recent thread
+    const lastThread = getLatestThread();
+    if (lastThread) {
+      loadThread(lastThread, true);
+    }
+
+    /* ── Language ── */
+    document.querySelectorAll('.lang-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const lang = btn.getAttribute('data-lang');
+        currentLang = lang;
+        localStorage.setItem('lang', lang);
+        applyLang(lang);
+        showRandomVerse();
+      });
+    });
+
+    function applyLang(lang) {
+      const t = i18n[lang];
+      document.documentElement.lang = lang;
+
+      // Update lang buttons
+      document.querySelectorAll('.lang-btn').forEach(b => {
+        b.classList.toggle('active', b.getAttribute('data-lang') === lang);
+      });
+
+      // Update text
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        if (t[key]) el.textContent = t[key];
+      });
+
+      // Update placeholders
+      document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+        const key = el.getAttribute('data-i18n-placeholder');
+        if (t[key]) el.placeholder = t[key];
+      });
+    }
+
+    function t(key) {
+      return i18n[currentLang]?.[key] || i18n.en[key] || key;
+    }
+
+    function showRandomVerse() {
+      const list = verses[currentLang] || verses.en;
+      const v = list[Math.floor(Math.random() * list.length)];
+      verseText.textContent = v.text;
+      verseRef.textContent = v.ref;
+    }
+
+    /* ── Tabs ── */
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const tab = btn.getAttribute('data-tab');
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById(`tab-${tab}`).classList.add('active');
+      });
+    });
+
+    function switchToTab(tab) {
+      document.querySelectorAll('.tab-btn').forEach(b => {
+        b.classList.toggle('active', b.getAttribute('data-tab') === tab);
+      });
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      document.getElementById(`tab-${tab}`).classList.add('active');
+    }
+
+    /* ── Category selection ── */
+    document.querySelectorAll('.category-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+        selectedCategory = btn.getAttribute('data-category');
+      });
+    });
+
+    /* ── Character count ── */
+    questionInput.addEventListener('input', () => {
+      charCount.textContent = questionInput.value.length;
+    });
+
+    /* ── Submit question ── */
+    askForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const text = questionInput.value.trim();
+      if (!text) return;
+
+      askStatus.textContent = t('sending');
+      askStatus.className = 'status-text';
+      submitBtn.disabled = true;
+
+      try {
+        const res = await fetch('/api/comment', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text, category: selectedCategory || 'other' })
+        });
+        if (!res.ok) throw new Error('Failed');
+        const data = await res.json();
+
+        saveThread(data.threadId, selectedCategory || 'other');
+        activeThreadId = data.threadId;
+        questionInput.value = '';
+        charCount.textContent = '0';
+        selectedCategory = null;
+        document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('selected'));
+
+        askStatus.textContent = t('sent');
+        askStatus.className = 'status-text success';
+
+        await loadThread(data.threadId);
+        switchToTab('thread');
+      } catch (err) {
+        askStatus.textContent = t('sendFail');
+        askStatus.className = 'status-text error';
+        console.error(err);
+      } finally {
+        submitBtn.disabled = false;
+      }
+    });
+
+    /* ── Refresh thread ── */
+    refreshBtn.addEventListener('click', () => {
+      if (activeThreadId) loadThread(activeThreadId);
+    });
+
+    /* ── Load thread by ID ── */
+    loadThreadBtn.addEventListener('click', () => {
+      const id = threadIdInput.value.trim().toUpperCase();
+      if (!id) return;
+      saveThread(id);
+      loadThread(id);
+      threadIdInput.value = '';
+    });
+
+    /* ── Load thread ── */
+    async function loadThread(id, silent) {
+      if (!silent) {
+        askStatus.textContent = t('loading');
+        askStatus.className = 'status-text';
+      }
+
+      try {
+        const res = await fetch(`/api/thread/${encodeURIComponent(id)}`);
+        if (!res.ok) throw new Error('Not found');
+        const data = await res.json();
+
+        activeThreadId = id;
+        threadPill.textContent = `#${id}`;
+        threadHeader.style.display = 'block';
+        threadEmpty.style.display = data.messages.length ? 'none' : 'block';
+        renderMessages(data.messages);
+
+        if (!silent) {
+          askStatus.textContent = t('loaded');
+          askStatus.className = 'status-text success';
+          switchToTab('thread');
+        }
+
+        // Start auto-refresh
+        startAutoRefresh(id);
+      } catch (err) {
+        if (!silent) {
+          askStatus.textContent = t('notFound');
+          askStatus.className = 'status-text error';
+        }
+        console.error(err);
+      }
+    }
+
+    /* ── Auto refresh every 30s ── */
+    function startAutoRefresh(id) {
+      if (autoRefreshTimer) clearInterval(autoRefreshTimer);
+      autoRefreshTimer = setInterval(() => {
+        if (activeThreadId === id) loadThread(id, true);
+      }, 30000);
+    }
+
+    /* ── Render messages ── */
+    function renderMessages(messages) {
+      messagesContainer.innerHTML = '';
+      messages.forEach(msg => {
+        const el = document.createElement('div');
+        const isAdmin = msg.sender === 'admin';
+        el.className = `msg ${isAdmin ? 'admin-msg' : 'user-msg'}`;
+
+        const categoryLabel = msg.category ? getCategoryLabel(msg.category) : '';
+
+        el.innerHTML = `
+          <div class="msg-header">
+            <span class="msg-sender">${isAdmin ? t('pastorReply') : t('you')}</span>
+            <span class="msg-time">${formatTime(msg.created_at)}</span>
+          </div>
+          ${categoryLabel && !isAdmin ? `<span class="msg-category">${escapeHtml(categoryLabel)}</span>` : ''}
+          <div class="msg-body">${escapeHtml(msg.body)}</div>
+        `;
+        messagesContainer.appendChild(el);
+      });
+
+      // Scroll to bottom
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+
+    function getCategoryLabel(cat) {
+      const map = {
+        prayer: t('catPrayer'),
+        spiritual: t('catSpiritual'),
+        personal: t('catPersonal'),
+        family: t('catFamily'),
+        faith: t('catFaith'),
+        other: t('catOther'),
+      };
+      return map[cat] || '';
+    }
+
+    function formatTime(ts) {
+      // SQLite returns "YYYY-MM-DD HH:MM:SS" (UTC, no Z) — normalize to ISO so browsers parse it correctly
+      const normalized = ts && !ts.includes('T') ? ts.replace(' ', 'T') + 'Z' : ts;
+      const d = new Date(normalized);
+      const now = new Date();
+      const diff = now - d;
+      if (diff < 60000) return currentLang === 'te' ? 'ఇప్పుడే' : 'Just now';
+      if (diff < 3600000) {
+        const mins = Math.floor(diff / 60000);
+        return currentLang === 'te' ? `${mins} నిమి. క్రితం` : `${mins}m ago`;
+      }
+      if (diff < 86400000) {
+        const hrs = Math.floor(diff / 3600000);
+        return currentLang === 'te' ? `${hrs} గం. క్రితం` : `${hrs}h ago`;
+      }
+      return d.toLocaleDateString(currentLang === 'te' ? 'te-IN' : 'en-IN', {
+        day: 'numeric', month: 'short', year: d.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
+      });
+    }
+
+    /* ── Thread storage ── */
+    function getThreads() {
+      try { return JSON.parse(localStorage.getItem('threads') || '[]'); }
+      catch { return []; }
+    }
+
+    function saveThread(id, category) {
+      const threads = getThreads().filter(t => t.id !== id);
+      threads.unshift({ id, category: category || 'other', savedAt: new Date().toISOString() });
+      localStorage.setItem('threads', JSON.stringify(threads.slice(0, 30)));
+      renderSavedThreads();
+    }
+
+    function deleteThread(id) {
+      const threads = getThreads().filter(t => t.id !== id);
+      localStorage.setItem('threads', JSON.stringify(threads));
+      renderSavedThreads();
+    }
+
+    function getLatestThread() {
+      const threads = getThreads();
+      return threads.length ? threads[0].id : null;
+    }
+
+    function renderSavedThreads() {
+      const threads = getThreads();
+      savedThreadsEl.innerHTML = '';
+
+      if (!threads.length) {
+        historyEmpty.style.display = 'block';
+        return;
+      }
+      historyEmpty.style.display = 'none';
+
+      threads.forEach(thread => {
+        const el = document.createElement('div');
+        el.className = 'thread-item';
+        el.innerHTML = `
+          <div class="thread-info" data-load-id="${escapeHtml(thread.id)}">
+            <span class="thread-id">#${escapeHtml(thread.id)}</span>
+            <span class="thread-meta">${getCategoryLabel(thread.category) || ''} · ${formatTime(thread.savedAt)}</span>
+          </div>
+          <div class="thread-actions">
+            <button class="btn-danger" data-delete-id="${escapeHtml(thread.id)}" title="Remove">✕</button>
+          </div>
+        `;
+        // Load thread on click
+        el.querySelector('.thread-info').addEventListener('click', () => {
+          loadThread(thread.id);
+        });
+        // Delete thread
+        el.querySelector('.btn-danger').addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (confirm(t('deleteConfirm'))) {
+            deleteThread(thread.id);
+          }
+        });
+        savedThreadsEl.appendChild(el);
+      });
+    }
+
+    /* ── Helpers ── */
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+  </script>
+</body>
+</html>
